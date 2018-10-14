@@ -1,6 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 from pony import orm
+from pony.orm import db_session
 
 # Create database object
 db = orm.Database()
@@ -8,15 +9,20 @@ db = orm.Database()
 
 # Create entity Product
 class Product(db.Entity):
-    id = orm.PrimaryKey(str)
+    id = orm.PrimaryKey(str, auto=False)
     description = orm.Required(str)
-    normal_price = orm.Required(int)
-    credit_price = orm.Required(int)
+    normal_price = orm.Required(float)
+    credit_price = orm.Required(float)
     url_product = orm.Required(str)
 
 
+@db_session
+def pushProduct(i, description, normal_price, credit_price, url):
+    Product(id=i, description=description, normal_price=normal_price, credit_price=credit_price, url_product=url)
+
+
 # MariaDb connect
-db.bind(provider='mysql', host='localhost', user='d3h', passwd='', db='webscraping')
+db.bind(provider='mysql', host='localhost', user='robot_wscraping_insert', passwd='', db='DBWebScraping')
 # Mapping
 db.generate_mapping(create_tables=True)
 
@@ -43,10 +49,12 @@ for credit_price, normal_price, product_description in \
     # Get value,only number, set decimal point
     normal_price = int(''.join(filter(str.isdigit, normal_price.contents[0]))) / 100
     credit_price = int(''.join(filter(str.isdigit, credit_price.contents[0]))) / 100
+    url = hostname + product_description.a.get('href')
     # Print info
     print('ID: ' + id)
     print('Description: ' + description)
     print('Normal price: ' + str(normal_price))
     print('Credit price: ' + str(credit_price))
-    print('URL product: ' + hostname + product_description.a.get('href'))
+    print('URL product: ' + url)
     print('\n')
+    pushProduct(id, description, normal_price, credit_price, url)
